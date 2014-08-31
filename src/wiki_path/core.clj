@@ -15,7 +15,8 @@
   (first (:content (first (html/select html-page [:h1#section_0])))))
 
 (defn link-pred [link]
-  (and (= "/wiki/" (subs link 0 6))
+  (and (> 6 (count link))
+       (= "/wiki/" (subs link 0 6))
        (not (some #(= \. %) link))))
 
 (def links
