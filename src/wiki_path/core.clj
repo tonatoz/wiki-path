@@ -3,7 +3,7 @@
             [org.httpkit.client :as http]
             [net.cgrand.enlive-html :as html]))
 
-(def url "/wiki/SAP")
+(def url "/wiki/Split")
 (def base-wiki-url "http://ru.m.wikipedia.org")
 
 (defn get-title [url]
@@ -13,7 +13,8 @@
 
 (defn link-pred [link]
   "Rules for link to wiki document"
-  (and (< 6 (count link))
+  (and (string? link)
+       (< 6 (count link))
        (= "/wiki/" (subs link 0 6))
        (not (some #(contains? #{\. \:} %) link))))
 
@@ -27,27 +28,24 @@
   (interpose " -> "
              (map (comp #(str "[" % "]") get-title)
                   (concat (zip/path node) [(zip/node node)]))))
-(def wiki-zipper
+
+(defn wiki-zipper [begin-url]
   (zip/zipper
     (constantly true)
     (fn [node] (seq (get-links (str base-wiki-url node))))
     nil
     url))
 
-(get-title
-  (-> wiki-zipper
-      (zip/down)
-      (zip/right)
-      (zip/right)
-      (zip/down)
-      (zip/node)))
+(defn bf-next [loc]
+  "Breadth-First zipper walking"
+  (or (zip/right loc)
+      (if (zip/up loc)
+        (if (-> loc zip/up zip/right)
+          (-> loc zip/up zip/right zip/down)
+          (-> loc zip/up zip/leftmost zip/down))
+        (-> loc zip/down))))
 
-(print
-  (construct-path (-> wiki-zipper
-                      (zip/down)
-                      (zip/right)
-                      (zip/right)
-                      (zip/down))))
-
-; Deep-fisrt is bad algorithm
-(take-while #(not= "/wiki/Microsoft" (zip/node %)) (iterate zip/next wiki-zipper))
+(->> (wiki-zipper url)
+      (iterate bf-next)
+      (take 250)
+      (map (comp get-title first)))
